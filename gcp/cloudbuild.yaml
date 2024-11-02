@@ -1,0 +1,92 @@
+# gcp/cloudbuild.yaml
+steps:
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  args:
+  - gcloud
+  - functions
+  - deploy
+  - todoist-reminder
+  - --region=${_REGION}
+  - --source=.
+  - --trigger-topic=daily-todoist-reminder
+  - --runtime=python39
+  - --entry-point=gcp_function_handler
+  - --set-env-vars=TODOIST_API_KEY=${_TODOIST_API_KEY},SENDER_EMAIL=${_SENDER_EMAIL},RECIPIENT_EMAIL=${_RECIPIENT_EMAIL},SENDGRID_API_KEY=${_SENDGRID_API_KEY}
+
+# gcp/main.tf
+terraform {
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 4.0"
+    }
+  }
+}
+
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
+# Cloud Function
+resource "google_cloudfunctions_function" "function" {
+  name        = "todoist-reminder"
+  description = "Todoist daily reminder function"
+  runtime     = "python39"
+
+  available_memory_mb   = 128
+  source_archive_bucket = google_storage_bucket.source.name
+  source_archive_object = google_storage_bucket_object.archive.name
+  trigger_http         = true
+  entry_point          = "gcp_function_handler"
+
+  environment_variables = {
+    TODOIST_API_KEY  = var.todoist_api_key
+    SENDER_EMAIL     = var.sender_email
+    RECIPIENT_EMAIL  = var.recipient_email
+    SENDGRID_API_KEY = var.sendgrid_api_key
+  }
+}
+
+# Cloud Scheduler job
+resource "google_cloud_scheduler_job" "job" {
+  name        = "todoist-reminder-trigger"
+  description = "Triggers Todoist reminder function daily"
+  schedule    = "0 7 * * *"
+
+  http_target {
+    http_method = "POST"
+    uri         = google_cloudfunctions_function.function.https_trigger_url
+    
+    oidc_token {
+      service_account_email = google_service_account.function_invoker.email
+    }
+  }
+}
+
+# Service Account
+resource "google_service_account" "function_invoker" {
+  account_id   = "function-invoker"
+  display_name = "Function Invoker"
+}
+
+# Storage bucket for function source
+resource "google_storage_bucket" "source" {
+  name     = "${var.project_id}-function-source"
+  location = var.region
+}
+
+# Zip source code
+resource "google_storage_bucket_object" "archive" {
+  name   = "function-source.zip"
+  bucket = google_storage_bucket.source.name
+  source = "../function-source.zip"
+}
+
+# Variables
+variable "project_id" {}
+variable "region" {}
+variable "todoist_api_key" {}
+variable "sender_email" {}
+variable "recipient_email" {}
+variable "sendgrid_api_key" {}

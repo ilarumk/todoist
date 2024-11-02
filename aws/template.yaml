@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: Todoist reminder Lambda function with daily trigger
+
+Parameters:
+  TodoistApiKey:
+    Type: String
+    Description: Todoist API Key
+    NoEcho: true
+  SenderEmail:
+    Type: String
+    Description: Sender email address (verified in SES)
+  RecipientEmail:
+    Type: String
+    Description: Recipient email address
+
+Resources:
+  TodoistReminderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../
+      Handler: handlers.aws_lambda_handler
+      Runtime: python3.9
+      Timeout: 60
+      MemorySize: 128
+      Environment:
+        Variables:
+          TODOIST_API_KEY: !Ref TodoistApiKey
+          SENDER_EMAIL: !Ref SenderEmail
+          RECIPIENT_EMAIL: !Ref RecipientEmail
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - ses:SendEmail
+              - ses:SendRawEmail
+            Resource: '*'
+      Events:
+        DailyTrigger:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 7 * * ? *)  # Daily at 7 AM UTC
