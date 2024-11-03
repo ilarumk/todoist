@@ -1,4 +1,4 @@
-name: Deploy Todoist Email Reminder to AWS
+name: Deploy Todoist Email Reminder (JS) to AWS
 
 on:
   schedule:
@@ -29,13 +29,11 @@ jobs:
       - name: Zip deployment package
         run: zip -r function.zip .
 
-      - name: Deploy Lambda function
-        uses: aws-actions/aws-lambda-deploy@v1
-        with:
-          function-name: "TodoistEmailReminderFunction"
-          zip-file: "function.zip"
-          runtime: "nodejs16.x"
-          handler: "index.handler"
+      - name: Deploy to Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name TodoistEmailReminderFunction \
+            --zip-file fileb://function.zip
 
       - name: Cleanup
         run: rm function.zip
