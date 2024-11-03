@@ -30,7 +30,6 @@ Resources:
           TODOIST_API_KEY: !Ref TodoistApiKey
           SENDER_EMAIL: !Ref SenderEmail
           RECIPIENT_EMAIL: !Ref RecipientEmail
-          AWS_REGION: !Ref AWS::Region
       Policies:
         - Statement:
           - Effect: Allow
@@ -42,9 +41,4 @@ Resources:
         DailyTrigger:
           Type: Schedule
           Properties:
-            Schedule: cron(0 7 * * ? *)  # Daily at 7 AM UTC
-
-Outputs:
-  FunctionName:
-    Description: Lambda function name
-    Value: !Ref TodoistReminderFunction
+            Schedule: cron(0 7 * * ? *)
