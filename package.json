@@ -1,0 +1,17 @@
+{
+  "name": "todoist-email-reminder",
+  "version": "1.0.0",
+  "description": "A Lambda function to send email reminders of Todoist tasks using AWS SES",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1048.0",
+    "todoist": "^2.0.6"
+  },
+  "devDependencies": {},
+  "author": "",
+  "license": "ISC"
+}
+

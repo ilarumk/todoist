@@ -1,42 +1,41 @@
-# .github/workflows/deploy.yml
-name: Deploy Todoist Reminder
+name: Deploy Todoist Email Reminder to AWS
 
 on:
-  push:
-    branches: [ main ]
+  schedule:
+    - cron: '0 7 * * *'
   workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: ${{ secrets.LAMBDA_ROLE_ARN }}
+          aws-region: us-west-2
 
-      - name: Install SAM CLI
-        env:
-          SAM_CLI_TELEMETRY: 0
-        run: |
-          pip install aws-sam-cli
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
 
-      - name: Deploy
-        working-directory: aws
-        run: |
-          sam build --use-container
-          sam deploy \
-            --stack-name todoist-reminder \
-            --resolve-s3 \
-            --capabilities CAPABILITY_IAM \
-            --parameter-overrides \
-              "TodoistApiKey=${{ secrets.TODOIST_API_KEY }} SenderEmail=${{ secrets.SENDER_EMAIL }} RecipientEmail=${{ secrets.RECIPIENT_EMAIL }}"
+      - name: Install dependencies
+        run: npm install
+
+      - name: Zip deployment package
+        run: zip -r function.zip .
+
+      - name: Deploy Lambda function
+        uses: aws-actions/aws-lambda-deploy@v1
+        with:
+          function-name: "TodoistEmailReminderFunction"
+          zip-file: "function.zip"
+          runtime: "nodejs16.x"
+          handler: "index.handler"
+
+      - name: Cleanup
+        run: rm function.zip
