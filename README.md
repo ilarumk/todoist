@@ -18,6 +18,19 @@ gh secret set SLACK_BOT_TOKEN
 
 
 
+
+Required secrets:
+- AWS_ACCESS_KEY_ID
+- AWS_SECRET_ACCESS_KEY
+- AWS_REGION
+- AWS_SAM_BUCKET (for storing SAM artifacts)
+- TODOIST_API_KEY
+- SENDER_EMAIL
+- RECIPIENT_EMAIL
+- SLACK_CHANNEL_ID (optional)
+- SLACK_BOT_TOKEN (optional)
+
+
 {
     "Version": "2012-10-17",
     "Statement": [
