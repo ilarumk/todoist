@@ -51,7 +51,6 @@ jobs:
             --capabilities CAPABILITY_IAM \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
+            --resolve-s3 \
             --parameter-overrides \
-              TodoistApiKey=${{ secrets.TODOIST_API_KEY }} \
-              SenderEmail=${{ secrets.SENDER_EMAIL }} \
-              RecipientEmail=${{ secrets.RECIPIENT_EMAIL }}
+              "TodoistApiKey=${{ secrets.TODOIST_API_KEY }} SenderEmail=${{ secrets.SENDER_EMAIL }} RecipientEmail=${{ secrets.RECIPIENT_EMAIL }}"
