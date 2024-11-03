@@ -15,6 +15,7 @@ env:
   PYTHON_VERSION: '3.9'
   AWS_REGION: ${{ secrets.AWS_REGION }}
   STACK_NAME: todoist-reminder
+  SAM_CLI_TELEMETRY: 0
 
 jobs:
   deploy:
@@ -42,6 +43,7 @@ jobs:
           pip install aws-sam-cli
 
       - name: Deploy with SAM
+        working-directory: aws
         run: |
           sam build
           sam deploy \
@@ -53,11 +55,3 @@ jobs:
               TodoistApiKey=${{ secrets.TODOIST_API_KEY }} \
               SenderEmail=${{ secrets.SENDER_EMAIL }} \
               RecipientEmail=${{ secrets.RECIPIENT_EMAIL }}
-
-      - name: Verify Lambda function
-        run: |
-          # Wait for deployment to complete
-          aws cloudformation wait stack-update-complete --stack-name ${{ env.STACK_NAME }} || \
-          aws cloudformation wait stack-create-complete --stack-name ${{ env.STACK_NAME }}
-          
-          echo "Deployment completed successfully!"

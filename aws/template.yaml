@@ -1,3 +1,4 @@
+# aws/template.yaml
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 
@@ -20,7 +21,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ../
-      Handler: handlers.aws_lambda_handler
+      Handler: app.lambda_handler
       Runtime: python3.9
       Timeout: 60
       MemorySize: 128
@@ -29,6 +30,7 @@ Resources:
           TODOIST_API_KEY: !Ref TodoistApiKey
           SENDER_EMAIL: !Ref SenderEmail
           RECIPIENT_EMAIL: !Ref RecipientEmail
+          AWS_REGION: !Ref AWS::Region
       Policies:
         - Statement:
           - Effect: Allow
@@ -41,3 +43,8 @@ Resources:
           Type: Schedule
           Properties:
             Schedule: cron(0 7 * * ? *)  # Daily at 7 AM UTC
+
+Outputs:
+  FunctionName:
+    Description: Lambda function name
+    Value: !Ref TodoistReminderFunction
