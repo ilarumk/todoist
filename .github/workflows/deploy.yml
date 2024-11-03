@@ -12,6 +12,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -20,13 +25,15 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Install SAM CLI
+        env:
+          SAM_CLI_TELEMETRY: 0
         run: |
           pip install aws-sam-cli
 
       - name: Deploy
         working-directory: aws
         run: |
-          sam build
+          sam build --use-container
           sam deploy \
             --stack-name todoist-reminder \
             --resolve-s3 \
