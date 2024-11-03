@@ -1,21 +1,10 @@
 # .github/workflows/deploy.yml
-name: Deploy Todoist Reminder to AWS
+name: Deploy Todoist Reminder
 
 on:
   push:
     branches: [ main ]
-    paths-ignore:
-      - '**.md'
-      - '.gitignore'
-  schedule:
-    - cron: '0 7 * * *'  # Runs daily at 7 AM UTC
-  workflow_dispatch:  # Manual trigger
-
-env:
-  PYTHON_VERSION: '3.9'
-  AWS_REGION: ${{ secrets.AWS_REGION }}
-  STACK_NAME: todoist-reminder
-  SAM_CLI_TELEMETRY: 0
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -23,34 +12,24 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Install dependencies
+      - name: Install SAM CLI
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
           pip install aws-sam-cli
 
-      - name: Deploy with SAM
+      - name: Deploy
         working-directory: aws
         run: |
           sam build
           sam deploy \
-            --stack-name ${{ env.STACK_NAME }} \
-            --capabilities CAPABILITY_IAM \
-            --no-confirm-changeset \
-            --no-fail-on-empty-changeset \
+            --stack-name todoist-reminder \
             --resolve-s3 \
+            --capabilities CAPABILITY_IAM \
             --parameter-overrides \
               "TodoistApiKey=${{ secrets.TODOIST_API_KEY }} SenderEmail=${{ secrets.SENDER_EMAIL }} RecipientEmail=${{ secrets.RECIPIENT_EMAIL }}"
