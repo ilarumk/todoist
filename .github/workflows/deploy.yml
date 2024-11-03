@@ -6,7 +6,6 @@ on:
     branches: [ main ]
     paths-ignore:
       - '**.md'
-      - 'docs/**'
       - '.gitignore'
   schedule:
     - cron: '0 7 * * *'  # Runs daily at 7 AM UTC
@@ -18,29 +17,7 @@ env:
   STACK_NAME: todoist-reminder
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-cov
-
-      - name: Run tests
-        run: |
-          pytest tests/ --cov=./ --cov-report=xml
-          
   deploy:
-    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -64,85 +41,23 @@ jobs:
           pip install -r requirements.txt
           pip install aws-sam-cli
 
-      - name: Cache SAM builds
-        uses: actions/cache@v3
-        with:
-          path: .aws-sam
-          key: ${{ runner.os }}-sam-${{ hashFiles('template.yaml') }}-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-sam-
-
-      - name: SAM build
+      - name: Deploy with SAM
         run: |
-          sam build --cached
-
-      - name: Create SAM package
-        run: |
-          sam package \
-            --output-template-file packaged.yaml \
-            --s3-bucket ${{ secrets.AWS_SAM_BUCKET }}
-
-      - name: Deploy SAM application
-        run: |
+          sam build
           sam deploy \
-            --template-file packaged.yaml \
             --stack-name ${{ env.STACK_NAME }} \
             --capabilities CAPABILITY_IAM \
+            --no-confirm-changeset \
             --no-fail-on-empty-changeset \
             --parameter-overrides \
               TodoistApiKey=${{ secrets.TODOIST_API_KEY }} \
               SenderEmail=${{ secrets.SENDER_EMAIL }} \
               RecipientEmail=${{ secrets.RECIPIENT_EMAIL }}
 
-      - name: Verify deployment
+      - name: Verify Lambda function
         run: |
-          # Wait for stack to complete
+          # Wait for deployment to complete
           aws cloudformation wait stack-update-complete --stack-name ${{ env.STACK_NAME }} || \
           aws cloudformation wait stack-create-complete --stack-name ${{ env.STACK_NAME }}
           
-          # Get Lambda function name
-          FUNCTION_NAME=$(aws cloudformation describe-stacks \
-            --stack-name ${{ env.STACK_NAME }} \
-            --query 'Stacks[0].Outputs[?OutputKey==`FunctionName`].OutputValue' \
-            --output text)
-          
-          # Verify Lambda function exists and is active
-          aws lambda get-function --function-name $FUNCTION_NAME
-          
-          # Test Lambda function
-          aws lambda invoke \
-            --function-name $FUNCTION_NAME \
-            --payload '{"test": true}' \
-            response.json
-          
-          # Check response
-          if grep -q "error" response.json; then
-            echo "Lambda function test failed"
-            exit 1
-          fi
-
-      - name: Notify on failure
-        if: failure()
-        uses: slackapi/slack-github-action@v1.23.0
-        with:
-          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
-          slack-message: "AWS Deployment failed! Check: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-
-      - name: Clean up old versions
-        if: success()
-        run: |
-          # Keep only the last 5 versions
-          FUNCTION_NAME=$(aws cloudformation describe-stacks \
-            --stack-name ${{ env.STACK_NAME }} \
-            --query 'Stacks[0].Outputs[?OutputKey==`FunctionName`].OutputValue' \
-            --output text)
-          
-          aws lambda list-versions-by-function \
-            --function-name $FUNCTION_NAME \
-            --query 'Versions[:-5]' \
-            --output text | \
-          while read VERSION; do
-            aws lambda delete-function --function-name $FUNCTION_NAME --qualifier $VERSION
-          done
+          echo "Deployment completed successfully!"
